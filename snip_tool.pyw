@@ -1,0 +1,264 @@
+import tkinter as tk
+import ctypes
+import ctypes.wintypes
+import io
+import os
+import datetime
+import shutil
+from PIL import ImageGrab, ImageTk, ImageEnhance, ImageDraw
+
+# ── Windows 11 compatibility ──
+# Set AppUserModelID so Windows treats this as its own app (for taskbar pinning)
+APP_ID = "SnipTool.SnipTool.1.0"
+ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
+
+# DPI awareness (Per-Monitor V2 for Win11, fallback for older)
+try:
+    ctypes.windll.shcore.SetProcessDpiAwareness(2)
+except Exception:
+    try:
+        ctypes.windll.user32.SetProcessDPIAware()
+    except Exception:
+        pass
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+ICO_PATH = os.path.join(SCRIPT_DIR, "snip_tool.ico")
+SAVE_FOLDER = os.path.join(os.path.expanduser("~"), "Pictures", "Snips")
+DOWNLOADS_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads")
+os.makedirs(SAVE_FOLDER, exist_ok=True)
+
+# ── Colors (Catppuccin Mocha) ──
+BG = "#1e1e2e"
+BG2 = "#2a2a3d"
+ACCENT = "#89b4fa"
+GREEN = "#a6e3a1"
+TEXT = "#cdd6f4"
+SUBTLE = "#6c7086"
+BTN_BG = "#313244"
+BTN_HOVER = "#45475a"
+
+
+def copy_to_clipboard(img):
+    output = io.BytesIO()
+    img.convert("RGB").save(output, "BMP")
+    data = output.getvalue()[14:]
+    output.close()
+
+    import win32clipboard
+    win32clipboard.OpenClipboard()
+    win32clipboard.EmptyClipboard()
+    win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
+    win32clipboard.CloseClipboard()
+
+
+def create_scissors_icon(size=64):
+    from PIL import Image as PILImage
+    icon = PILImage.new("RGBA", (size, size), (0, 0, 0, 0))
+    d = ImageDraw.Draw(icon)
+    cx, cy = size / 2, size / 2
+    r = size * 0.18
+    lw = max(2, size // 16)
+
+    d.line([(cx, cy - r * 2.5), (cx - r * 2.2, cy + r * 0.5)], fill="#89b4fa", width=lw)
+    d.line([(cx, cy - r * 2.5), (cx + r * 2.2, cy + r * 0.5)], fill="#89b4fa", width=lw)
+
+    lx, ly = cx - r * 2.2, cy + r * 1.5
+    d.ellipse([lx - r * 1.2, ly - r * 1.2, lx + r * 1.2, ly + r * 1.2], outline="#89b4fa", width=lw)
+    rx, ry = cx + r * 2.2, cy + r * 1.5
+    d.ellipse([rx - r * 1.2, ry - r * 1.2, rx + r * 1.2, ry + r * 1.2], outline="#89b4fa", width=lw)
+
+    pr = max(2, size // 18)
+    d.ellipse([cx - pr, cy - r * 0.8 - pr, cx + pr, cy - r * 0.8 + pr], fill="#a6e3a1")
+
+    return icon
+
+
+class SnipTool:
+    def __init__(self):
+        self.screenshot = ImageGrab.grab(all_screens=False)
+        self.scr_w, self.scr_h = self.screenshot.size
+
+        self.root = tk.Tk()
+        self.root.overrideredirect(True)
+        self.root.attributes("-topmost", True)
+        self.root.geometry(f"{self.scr_w}x{self.scr_h}+0+0")
+
+        self.canvas = tk.Canvas(self.root, cursor="cross", highlightthickness=0,
+                                width=self.scr_w, height=self.scr_h)
+        self.canvas.pack()
+
+        dimmed = ImageEnhance.Brightness(self.screenshot).enhance(0.7)
+        self.bg_photo = ImageTk.PhotoImage(dimmed)
+        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.bg_photo)
+
+        self.start_x = None
+        self.start_y = None
+        self.rect_id = None
+        self.size_text = None
+        self.bright_id = None
+        self.bright_photo = None
+
+        # Scissors icon in center
+        self.scissors_img = create_scissors_icon(80)
+        self.scissors_photo = ImageTk.PhotoImage(self.scissors_img)
+        self.scissors_id = self.canvas.create_image(
+            self.scr_w // 2, self.scr_h // 2 - 30,
+            image=self.scissors_photo
+        )
+
+        # Header bar
+        self.canvas.create_rectangle(0, 0, self.scr_w, 50, fill="#1e1e2e", stipple="gray50")
+        self.canvas.create_text(
+            self.scr_w // 2, 25,
+            text="✂  Drag to snip  |  ESC to cancel",
+            fill="#89b4fa", font=("Segoe UI", 13, "bold")
+        )
+
+        self.canvas.bind("<ButtonPress-1>", self.on_press)
+        self.canvas.bind("<B1-Motion>", self.on_drag)
+        self.canvas.bind("<ButtonRelease-1>", self.on_release)
+        self.root.bind("<Escape>", lambda e: self.root.destroy())
+
+    def on_press(self, event):
+        self.start_x = event.x
+        self.start_y = event.y
+        if self.scissors_id:
+            self.canvas.delete(self.scissors_id)
+            self.scissors_id = None
+
+    def on_drag(self, event):
+        if self.rect_id:
+            self.canvas.delete(self.rect_id)
+        if self.size_text:
+            self.canvas.delete(self.size_text)
+        if self.bright_id:
+            self.canvas.delete(self.bright_id)
+
+        x1 = min(self.start_x, event.x)
+        y1 = min(self.start_y, event.y)
+        x2 = max(self.start_x, event.x)
+        y2 = max(self.start_y, event.y)
+
+        if x2 - x1 > 2 and y2 - y1 > 2:
+            crop = self.screenshot.crop((x1, y1, x2, y2))
+            self.bright_photo = ImageTk.PhotoImage(crop)
+            self.bright_id = self.canvas.create_image(x1, y1, anchor=tk.NW, image=self.bright_photo)
+
+        self.rect_id = self.canvas.create_rectangle(
+            x1, y1, x2, y2, outline=ACCENT, width=2, dash=(6, 4)
+        )
+
+        w = x2 - x1
+        h = y2 - y1
+        self.size_text = self.canvas.create_text(
+            x2, y1 - 10, text=f"{w} × {h}",
+            anchor=tk.E, fill="white", font=("Segoe UI", 9, "bold")
+        )
+
+    def on_release(self, event):
+        x1 = min(self.start_x, event.x)
+        y1 = min(self.start_y, event.y)
+        x2 = max(self.start_x, event.x)
+        y2 = max(self.start_y, event.y)
+
+        if x2 - x1 < 5 or y2 - y1 < 5:
+            return
+
+        img = self.screenshot.crop((x1, y1, x2, y2))
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        filepath = os.path.join(SAVE_FOLDER, f"snip_{timestamp}.png")
+        img.save(filepath)
+        copy_to_clipboard(img)
+
+        self.root.destroy()
+        self.show_result(filepath, img)
+
+    def show_result(self, filepath, snip_img):
+        win = tk.Tk()
+        win.title("Snip Tool")
+        win.attributes("-topmost", True)
+        win.configure(bg=BG)
+        win.resizable(False, False)
+
+        # Set icon
+        if os.path.exists(ICO_PATH):
+            win.iconbitmap(ICO_PATH)
+
+        # ── Header (compact) ──
+        header = tk.Frame(win, bg=BG2, height=44)
+        header.pack(fill=tk.X)
+        header.pack_propagate(False)
+
+        tk.Label(header, text="✂", font=("Segoe UI", 16), bg=BG2, fg=ACCENT
+                 ).pack(side=tk.LEFT, padx=(12, 4), pady=6)
+        tk.Label(header, text="Snip Tool", font=("Segoe UI", 11, "bold"), bg=BG2, fg=TEXT
+                 ).pack(side=tk.LEFT, pady=6)
+
+        tk.Frame(win, bg=ACCENT, height=2).pack(fill=tk.X)
+
+        # ── Preview (compact) ──
+        preview_frame = tk.Frame(win, bg=BG, padx=12, pady=8)
+        preview_frame.pack(fill=tk.X)
+
+        pw, ph = snip_img.size
+        max_w, max_h = 260, 140
+        ratio = min(max_w / pw, max_h / ph, 1.0)
+        preview_size = (max(1, int(pw * ratio)), max(1, int(ph * ratio)))
+        from PIL import Image as PILImage
+        preview_pil = snip_img.resize(preview_size, PILImage.LANCZOS)
+        preview_photo = ImageTk.PhotoImage(preview_pil)
+
+        preview_label = tk.Label(preview_frame, image=preview_photo, bg="#11111b",
+                                 relief="solid", bd=1, highlightbackground="#45475a")
+        preview_label.image = preview_photo
+        preview_label.pack(pady=(0, 4))
+
+        file_size = os.path.getsize(filepath)
+        size_str = f"{file_size / 1024:.1f} KB" if file_size < 1048576 else f"{file_size / 1048576:.1f} MB"
+        tk.Label(preview_frame, text=f"{pw}×{ph}  •  {size_str}",
+                 font=("Segoe UI", 8), bg=BG, fg=SUBTLE).pack()
+
+        # ── Status ──
+        tk.Label(win, text="✓ Copied to clipboard  (Ctrl+V)",
+                 font=("Segoe UI", 9, "bold"), bg=BG, fg=GREEN, padx=12, anchor=tk.W
+                 ).pack(fill=tk.X, pady=(4, 6))
+
+        tk.Frame(win, bg="#313244", height=1).pack(fill=tk.X, padx=12)
+
+        # ── Buttons (compact row) ──
+        btn_frame = tk.Frame(win, bg=BG, padx=12, pady=8)
+        btn_frame.pack(fill=tk.X)
+
+        dl_label = tk.Label(btn_frame, text="", font=("Segoe UI", 8), bg=BG, fg=GREEN)
+
+        def save_to_downloads():
+            dest = os.path.join(DOWNLOADS_FOLDER, os.path.basename(filepath))
+            shutil.copy2(filepath, dest)
+            dl_label.config(text="✓ Saved!")
+
+        def make_btn(parent, text, cmd, primary=False):
+            return tk.Button(
+                parent, text=text, font=("Segoe UI", 9, "bold" if primary else ""),
+                bg=ACCENT if primary else BTN_BG,
+                fg="#1e1e2e" if primary else TEXT,
+                activebackground=BTN_HOVER, activeforeground=TEXT,
+                relief="flat", cursor="hand2", padx=10, pady=3, command=cmd
+            )
+
+        make_btn(btn_frame, "📁 Downloads", save_to_downloads, True).pack(side=tk.LEFT, padx=(0, 4))
+        make_btn(btn_frame, "🖼 Open", lambda: os.startfile(filepath)).pack(side=tk.LEFT, padx=(0, 4))
+        make_btn(btn_frame, "✕", win.destroy).pack(side=tk.RIGHT)
+        dl_label.pack(side=tk.LEFT, padx=4)
+
+        # Center on screen
+        win.update_idletasks()
+        sw, sh = win.winfo_screenwidth(), win.winfo_screenheight()
+        ww, wh = win.winfo_width(), win.winfo_height()
+        win.geometry(f"+{(sw - ww) // 2}+{(sh - wh) // 2}")
+
+        win.mainloop()
+
+
+if __name__ == "__main__":
+    SnipTool()
+    tk.mainloop()
