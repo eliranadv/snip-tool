@@ -73,15 +73,29 @@ def create_scissors_icon(size=64):
     return icon
 
 
+def get_virtual_screen():
+    """Get the bounding box of all monitors combined."""
+    user32 = ctypes.windll.user32
+    left = user32.GetSystemMetrics(76)    # SM_XVIRTUALSCREEN
+    top = user32.GetSystemMetrics(77)     # SM_YVIRTUALSCREEN
+    width = user32.GetSystemMetrics(78)   # SM_CXVIRTUALSCREEN
+    height = user32.GetSystemMetrics(79)  # SM_CYVIRTUALSCREEN
+    return left, top, width, height
+
+
 class SnipTool:
     def __init__(self):
-        self.screenshot = ImageGrab.grab(all_screens=False)
+        # Capture ALL screens
+        self.screenshot = ImageGrab.grab(all_screens=True)
         self.scr_w, self.scr_h = self.screenshot.size
+
+        # Get virtual screen offset (can be negative if monitor is to the left)
+        self.virt_left, self.virt_top, _, _ = get_virtual_screen()
 
         self.root = tk.Tk()
         self.root.overrideredirect(True)
         self.root.attributes("-topmost", True)
-        self.root.geometry(f"{self.scr_w}x{self.scr_h}+0+0")
+        self.root.geometry(f"{self.scr_w}x{self.scr_h}+{self.virt_left}+{self.virt_top}")
 
         self.canvas = tk.Canvas(self.root, cursor="cross", highlightthickness=0,
                                 width=self.scr_w, height=self.scr_h)
