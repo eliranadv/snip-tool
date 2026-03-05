@@ -52,23 +52,43 @@ def copy_to_clipboard(img):
 
 
 def create_scissors_icon(size=64):
+    """Draw scissors cutting paper icon."""
     from PIL import Image as PILImage
     icon = PILImage.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(icon)
-    cx, cy = size / 2, size / 2
-    r = size * 0.18
-    lw = max(2, size // 16)
+    s = size / 64  # scale factor
 
-    d.line([(cx, cy - r * 2.5), (cx - r * 2.2, cy + r * 0.5)], fill="#89b4fa", width=lw)
-    d.line([(cx, cy - r * 2.5), (cx + r * 2.2, cy + r * 0.5)], fill="#89b4fa", width=lw)
+    lw = max(2, int(2.5 * s))
 
-    lx, ly = cx - r * 2.2, cy + r * 1.5
-    d.ellipse([lx - r * 1.2, ly - r * 1.2, lx + r * 1.2, ly + r * 1.2], outline="#89b4fa", width=lw)
-    rx, ry = cx + r * 2.2, cy + r * 1.5
-    d.ellipse([rx - r * 1.2, ry - r * 1.2, rx + r * 1.2, ry + r * 1.2], outline="#89b4fa", width=lw)
+    # Paper (tilted white rectangle, behind scissors)
+    paper_pts = [
+        (18 * s, 6 * s), (56 * s, 6 * s),
+        (56 * s, 50 * s), (18 * s, 50 * s)
+    ]
+    d.polygon(paper_pts, fill="#cdd6f4", outline="#9399b2", width=max(1, int(s)))
 
-    pr = max(2, size // 18)
-    d.ellipse([cx - pr, cy - r * 0.8 - pr, cx + pr, cy - r * 0.8 + pr], fill="#a6e3a1")
+    # Dashed cut line across paper
+    cut_y = 28 * s
+    dash_len = max(3, int(4 * s))
+    for x in range(int(14 * s), int(58 * s), dash_len * 2):
+        d.line([(x, cut_y), (min(x + dash_len, 58 * s), cut_y)], fill="#f38ba8", width=max(1, int(1.2 * s)))
+
+    # Scissors blades (crossing lines)
+    d.line([(8 * s, 20 * s), (38 * s, 34 * s)], fill="#89b4fa", width=lw)
+    d.line([(8 * s, 38 * s), (38 * s, 24 * s)], fill="#89b4fa", width=lw)
+
+    # Handle rings
+    ring_r = 5 * s
+    ring_lw = max(1, int(1.8 * s))
+    d.ellipse([2 * s - ring_r, 17 * s - ring_r, 2 * s + ring_r, 17 * s + ring_r],
+              outline="#cba6f7", width=ring_lw)
+    d.ellipse([2 * s - ring_r, 41 * s - ring_r, 2 * s + ring_r, 41 * s + ring_r],
+              outline="#cba6f7", width=ring_lw)
+
+    # Pivot dot
+    pr = max(2, int(2.5 * s))
+    pivot_x, pivot_y = 22 * s, 29 * s
+    d.ellipse([pivot_x - pr, pivot_y - pr, pivot_x + pr, pivot_y + pr], fill="#a6e3a1")
 
     return icon
 
@@ -245,8 +265,22 @@ class SnipTool:
 
         dl_label = tk.Label(btn_frame, text="", font=("Segoe UI", 8), bg=BG, fg=GREEN)
 
+        # Filename entry (editable, pre-filled with default name)
+        default_name = os.path.splitext(os.path.basename(filepath))[0]
+        name_entry = tk.Entry(
+            btn_frame, font=("Segoe UI", 8), width=18,
+            bg=BTN_BG, fg=TEXT, insertbackground=TEXT,
+            relief="flat", highlightthickness=1,
+            highlightbackground=SUBTLE, highlightcolor=ACCENT
+        )
+        name_entry.insert(0, default_name)
+        name_entry.icursor(tk.END)
+
         def save_to_downloads():
-            dest = os.path.join(DOWNLOADS_FOLDER, os.path.basename(filepath))
+            custom_name = name_entry.get().strip()
+            if not custom_name:
+                custom_name = default_name
+            dest = os.path.join(DOWNLOADS_FOLDER, custom_name + ".png")
             shutil.copy2(filepath, dest)
             dl_label.config(text="✓ Saved!")
 
@@ -265,7 +299,8 @@ class SnipTool:
             tk.mainloop()
 
         make_btn(btn_frame, "✂ New", new_snip, True).pack(side=tk.LEFT, padx=(0, 4))
-        make_btn(btn_frame, "📁 Downloads", save_to_downloads).pack(side=tk.LEFT, padx=(0, 4))
+        name_entry.pack(side=tk.LEFT, padx=(0, 4), ipady=2)
+        make_btn(btn_frame, "📁", save_to_downloads).pack(side=tk.LEFT, padx=(0, 4))
         make_btn(btn_frame, "🖼 Open", lambda: os.startfile(filepath)).pack(side=tk.LEFT, padx=(0, 4))
         make_btn(btn_frame, "✕", win.destroy).pack(side=tk.RIGHT)
         dl_label.pack(side=tk.LEFT, padx=4)
