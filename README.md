@@ -1,47 +1,47 @@
 # ✂ Snip Tool
 
-A lightweight, fast screen snipping tool for Windows.
+כלי חיתוך מסך קליל ומהיר לווינדוס.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
 ![Windows](https://img.shields.io/badge/Windows-10%2F11-0078D6?logo=windows)
 
-## Features
+## תכונות
 
-- **Free-drag selection** — Click and drag to capture any area of your screen
-- **Multi-monitor support** — Works across all connected displays
-- **Instant clipboard copy** — Snip is copied to clipboard automatically (Ctrl+V to paste)
-- **Save to Downloads** — One-click save to your Downloads folder
-- **Custom filename** — Edit the filename before saving
-- **New Snip button** — Quickly take another screenshot without restarting
-- **Open in viewer** — Open the saved snip directly from the app
-- **Dimmed overlay** — Screen dims while selecting, with a bright preview of the selected area
-- **Size indicator** — Shows pixel dimensions while dragging
-- **Catppuccin Mocha theme** — Dark, modern UI design
-- **Silent VBS launcher** — No console window flash on startup
-- **Custom scissors icon** — Professional icon for taskbar pinning
-- **Windows 11 compatible** — Per-Monitor DPI awareness, AppUserModelID support
+- **גרירה חופשית** — לחץ וגרור כדי לצלם כל אזור במסך
+- **תמיכה במספר מסכים** — עובד על כל המסכים המחוברים
+- **העתקה מיידית ללוח** — החיתוך מועתק אוטומטית (Ctrl+V להדבקה)
+- **שמירה לתיקיית הורדות** — לחיצה אחת לשמירה בתיקיית ההורדות
+- **שם קובץ מותאם** — אפשרות לערוך את שם הקובץ לפני השמירה
+- **חיתוך חדש** — כפתור לחיתוך נוסף ללא הפעלה מחדש
+- **פתיחה בצפייה** — פתיחת התמונה ישירות מהאפליקציה
+- **שכבת עמעום** — המסך מתעמעם בזמן הבחירה עם תצוגה מוארת של האזור הנבחר
+- **מציג גודל** — מציג מימדים בפיקסלים בזמן הגרירה
+- **עיצוב כהה מודרני** — ערכת נושא Catppuccin Mocha
+- **הפעלה שקטה** — ללא הבזק חלון שחור בהפעלה
+- **סמל מספריים** — אייקון מקצועי להצמדה לשורת המשימות
+- **תואם Windows 11** — תמיכה ב-DPI גבוה ובהצמדה לשורת המשימות
 
-## How It Works
+## איך זה עובד
 
-1. Launch the app — screen dims slightly with a crosshair cursor
-2. Drag to select the area you want to capture
-3. Release — image is saved & copied to clipboard
-4. A compact result window shows a preview with action buttons:
-   - **✂ New** — Take another snip
-   - **⬇** — Save to Downloads folder (with optional custom filename)
-   - **🖼 Open** — Open the snip image
-   - **✕** — Close
+1. הפעל את האפליקציה — המסך מתעמעם ומופיע סמן צלב
+2. גרור כדי לבחור את האזור לצילום
+3. שחרר — התמונה נשמרת ומועתקת ללוח
+4. חלון תוצאה מציג תצוגה מקדימה עם כפתורים:
+   - **✂ New** — חיתוך חדש
+   - **⬇** — שמירה לתיקיית הורדות (עם אפשרות לשם מותאם)
+   - **🖼 Open** — פתיחת התמונה
+   - **✕** — סגירה
 
-Press **ESC** to cancel at any time.
+לחץ **ESC** לביטול בכל שלב.
 
-## Installation
+## התקנה
 
-### Requirements
+### דרישות
 
 - Python 3.10+
 - Windows 10/11
 
-### Setup
+### הגדרה
 
 ```bash
 git clone https://github.com/eliranadv/snip-tool.git
@@ -49,26 +49,26 @@ cd snip-tool
 pip install Pillow pywin32
 ```
 
-### Run
+### הפעלה
 
-Double-click `Snip Tool.vbs` (silent, no console flash) or run:
+לחץ דאבל קליק על `Snip Tool.vbs` או הפעל:
 
 ```bash
 pythonw snip_tool.pyw
 ```
 
-### Pin to Taskbar
+### הצמדה לשורת המשימות
 
-Drag `Snip Tool.lnk` to your taskbar.
+גרור את `Snip Tool.lnk` לשורת המשימות.
 
-## Files
+## קבצים
 
-| File | Description |
-|------|-------------|
-| `snip_tool.pyw` | Main application |
-| `snip_tool.ico` | Scissors icon for taskbar |
-| `Snip Tool.vbs` | Silent launcher (no console flash) |
+| קובץ | תיאור |
+|------|--------|
+| `snip_tool.pyw` | האפליקציה הראשית |
+| `snip_tool.ico` | סמל המספריים |
+| `Snip Tool.vbs` | מפעיל שקט (ללא חלון שחור) |
 
-## License
+## רישיון
 
 MIT
