@@ -2,6 +2,70 @@
 from PIL import Image, ImageDraw
 
 
+def _draw_icon(d, size):
+    """Draw the scissors + dashed-rect icon on a given ImageDraw at `size`."""
+    s = size / 64  # scale factor
+    white = "#FFFFFF"
+
+    # ── Blue circle background ──
+    pad = max(1, int(2 * s))
+    d.ellipse([pad, pad, size - pad - 1, size - pad - 1], fill="#1e88e5")
+
+    # Gloss highlight (upper lighter blue)
+    gh = int(28 * s)
+    gp = int(8 * s)
+    d.ellipse([pad + gp, pad + int(1 * s), size - pad - gp - 1, pad + gh],
+              fill="#42a5f5")
+
+    # ── Dashed selection rectangle ──
+    rx1, ry1 = int(22 * s), int(14 * s)
+    rx2, ry2 = int(54 * s), int(48 * s)
+    dash = max(2, int(3.5 * s))
+    dw = max(1, int(1.5 * s))
+
+    for edge_start, edge_end, fixed, horizontal in [
+        (rx1, rx2, ry1, True), (rx1, rx2, ry2, True),
+        (ry1, ry2, rx1, False), (ry1, ry2, rx2, False),
+    ]:
+        pos = edge_start
+        while pos < edge_end:
+            end = min(pos + dash, edge_end)
+            if horizontal:
+                d.line([(pos, fixed), (end, fixed)], fill=white, width=dw)
+            else:
+                d.line([(fixed, pos), (fixed, end)], fill=white, width=dw)
+            pos += dash * 2
+
+    # Corner brackets
+    cl = int(6 * s)
+    cw = max(2, int(2.5 * s))
+    for cx, cy, dx, dy in [
+        (rx1, ry1, 1, 1), (rx2, ry1, -1, 1),
+        (rx1, ry2, 1, -1), (rx2, ry2, -1, -1),
+    ]:
+        d.line([(cx, cy), (cx + dx * cl, cy)], fill=white, width=cw)
+        d.line([(cx, cy), (cx, cy + dy * cl)], fill=white, width=cw)
+
+    # ── Scissors blades ──
+    bw = max(3, int(3.5 * s))
+    d.line([(int(14 * s), int(20 * s)), (int(50 * s), int(38 * s))],
+           fill=white, width=bw)
+    d.line([(int(14 * s), int(44 * s)), (int(50 * s), int(26 * s))],
+           fill=white, width=bw)
+
+    # Handle rings
+    rr = int(5.5 * s)
+    rw = max(2, int(2.5 * s))
+    for hx, hy in [(int(9 * s), int(16 * s)), (int(9 * s), int(48 * s))]:
+        d.ellipse([hx - rr, hy - rr, hx + rr, hy + rr],
+                  outline=white, width=rw)
+
+    # Pivot dot
+    pr = max(2, int(2 * s))
+    px, py = int(30 * s), int(32 * s)
+    d.ellipse([px - pr, py - pr, px + pr, py + pr], fill=white)
+
+
 def create_scissors_ico(path):
     sizes = [16, 24, 32, 48, 64, 128, 256]
     images = []
@@ -9,43 +73,7 @@ def create_scissors_ico(path):
     for size in sizes:
         img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
         d = ImageDraw.Draw(img)
-        s = size / 64  # scale factor
-
-        # Circle background
-        pad = max(1, int(2 * s))
-        d.ellipse([pad, pad, size - pad, size - pad],
-                  fill="#1e1e2e", outline="#89b4fa", width=max(1, int(1.5 * s)))
-
-        lw = max(2, int(2.5 * s))
-
-        # Paper (white rectangle)
-        d.rectangle([22 * s, 10 * s, 54 * s, 48 * s],
-                    fill="#cdd6f4", outline="#9399b2", width=max(1, int(s)))
-
-        # Dashed cut line
-        cut_y = 28 * s
-        dash_len = max(3, int(4 * s))
-        for x in range(int(18 * s), int(56 * s), dash_len * 2):
-            d.line([(x, cut_y), (min(x + dash_len, 56 * s), cut_y)],
-                   fill="#f38ba8", width=max(1, int(1.2 * s)))
-
-        # Scissors blades
-        d.line([(10 * s, 22 * s), (36 * s, 34 * s)], fill="#89b4fa", width=lw)
-        d.line([(10 * s, 38 * s), (36 * s, 24 * s)], fill="#89b4fa", width=lw)
-
-        # Handle rings
-        ring_r = 5 * s
-        ring_lw = max(1, int(1.8 * s))
-        d.ellipse([5 * s - ring_r, 19 * s - ring_r, 5 * s + ring_r, 19 * s + ring_r],
-                  outline="#cba6f7", width=ring_lw)
-        d.ellipse([5 * s - ring_r, 41 * s - ring_r, 5 * s + ring_r, 41 * s + ring_r],
-                  outline="#cba6f7", width=ring_lw)
-
-        # Pivot dot
-        pr = max(2, int(2.5 * s))
-        px, py = 22 * s, 29 * s
-        d.ellipse([px - pr, py - pr, px + pr, py + pr], fill="#a6e3a1")
-
+        _draw_icon(d, size)
         images.append(img)
 
     images[-1].save(path, format="ICO", sizes=[(sz, sz) for sz in sizes],

@@ -52,43 +52,70 @@ def copy_to_clipboard(img):
 
 
 def create_scissors_icon(size=64):
-    """Draw scissors cutting paper icon."""
+    """Draw scissors + dashed-rect icon (blue circle, white elements)."""
     from PIL import Image as PILImage
     icon = PILImage.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(icon)
-    s = size / 64  # scale factor
+    s = size / 64
+    white = "#FFFFFF"
 
-    lw = max(2, int(2.5 * s))
+    # Blue circle background
+    pad = max(1, int(2 * s))
+    d.ellipse([pad, pad, size - pad - 1, size - pad - 1], fill="#1e88e5")
 
-    # Paper (tilted white rectangle, behind scissors)
-    paper_pts = [
-        (18 * s, 6 * s), (56 * s, 6 * s),
-        (56 * s, 50 * s), (18 * s, 50 * s)
-    ]
-    d.polygon(paper_pts, fill="#cdd6f4", outline="#9399b2", width=max(1, int(s)))
+    # Gloss highlight
+    gh = int(28 * s)
+    gp = int(8 * s)
+    d.ellipse([pad + gp, pad + int(1 * s), size - pad - gp - 1, pad + gh],
+              fill="#42a5f5")
 
-    # Dashed cut line across paper
-    cut_y = 28 * s
-    dash_len = max(3, int(4 * s))
-    for x in range(int(14 * s), int(58 * s), dash_len * 2):
-        d.line([(x, cut_y), (min(x + dash_len, 58 * s), cut_y)], fill="#f38ba8", width=max(1, int(1.2 * s)))
+    # Dashed selection rectangle
+    rx1, ry1 = int(22 * s), int(14 * s)
+    rx2, ry2 = int(54 * s), int(48 * s)
+    dash = max(2, int(3.5 * s))
+    dw = max(1, int(1.5 * s))
 
-    # Scissors blades (crossing lines)
-    d.line([(8 * s, 20 * s), (38 * s, 34 * s)], fill="#89b4fa", width=lw)
-    d.line([(8 * s, 38 * s), (38 * s, 24 * s)], fill="#89b4fa", width=lw)
+    for edge_start, edge_end, fixed, horizontal in [
+        (rx1, rx2, ry1, True), (rx1, rx2, ry2, True),
+        (ry1, ry2, rx1, False), (ry1, ry2, rx2, False),
+    ]:
+        pos = edge_start
+        while pos < edge_end:
+            end = min(pos + dash, edge_end)
+            if horizontal:
+                d.line([(pos, fixed), (end, fixed)], fill=white, width=dw)
+            else:
+                d.line([(fixed, pos), (fixed, end)], fill=white, width=dw)
+            pos += dash * 2
+
+    # Corner brackets
+    cl = int(6 * s)
+    cw = max(2, int(2.5 * s))
+    for cx, cy, dx, dy in [
+        (rx1, ry1, 1, 1), (rx2, ry1, -1, 1),
+        (rx1, ry2, 1, -1), (rx2, ry2, -1, -1),
+    ]:
+        d.line([(cx, cy), (cx + dx * cl, cy)], fill=white, width=cw)
+        d.line([(cx, cy), (cx, cy + dy * cl)], fill=white, width=cw)
+
+    # Scissors blades
+    bw = max(3, int(3.5 * s))
+    d.line([(int(14 * s), int(20 * s)), (int(50 * s), int(38 * s))],
+           fill=white, width=bw)
+    d.line([(int(14 * s), int(44 * s)), (int(50 * s), int(26 * s))],
+           fill=white, width=bw)
 
     # Handle rings
-    ring_r = 5 * s
-    ring_lw = max(1, int(1.8 * s))
-    d.ellipse([2 * s - ring_r, 17 * s - ring_r, 2 * s + ring_r, 17 * s + ring_r],
-              outline="#cba6f7", width=ring_lw)
-    d.ellipse([2 * s - ring_r, 41 * s - ring_r, 2 * s + ring_r, 41 * s + ring_r],
-              outline="#cba6f7", width=ring_lw)
+    rr = int(5.5 * s)
+    rw = max(2, int(2.5 * s))
+    for hx, hy in [(int(9 * s), int(16 * s)), (int(9 * s), int(48 * s))]:
+        d.ellipse([hx - rr, hy - rr, hx + rr, hy + rr],
+                  outline=white, width=rw)
 
     # Pivot dot
-    pr = max(2, int(2.5 * s))
-    pivot_x, pivot_y = 22 * s, 29 * s
-    d.ellipse([pivot_x - pr, pivot_y - pr, pivot_x + pr, pivot_y + pr], fill="#a6e3a1")
+    pr = max(2, int(2 * s))
+    px, py = int(30 * s), int(32 * s)
+    d.ellipse([px - pr, py - pr, px + pr, py + pr], fill=white)
 
     return icon
 
