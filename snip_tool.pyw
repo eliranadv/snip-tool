@@ -325,10 +325,10 @@ class SnipTool:
             SnipTool()
             tk.mainloop()
 
-        make_btn(btn_frame, "✂ New", new_snip, True).pack(side=tk.LEFT, padx=(0, 4))
-        name_entry.pack(side=tk.LEFT, padx=(0, 4), ipady=2)
-        make_btn(btn_frame, "⬇", save_to_downloads).pack(side=tk.LEFT, padx=(0, 4))
-        make_btn(btn_frame, "🖼 Open", lambda: os.startfile(filepath)).pack(side=tk.LEFT, padx=(0, 4))
+        make_btn(btn_frame, "✂ New", new_snip, True).pack(side=tk.LEFT, padx=(0, 8))
+        name_entry.pack(side=tk.LEFT, padx=(0, 8), ipady=2)
+        make_btn(btn_frame, "⬇", save_to_downloads).pack(side=tk.LEFT, padx=(0, 8))
+        make_btn(btn_frame, "🖼 Open", lambda: os.startfile(filepath)).pack(side=tk.LEFT, padx=(0, 8))
         make_btn(btn_frame, "✕", win.destroy).pack(side=tk.RIGHT)
         dl_label.pack(side=tk.LEFT, padx=4)
 
